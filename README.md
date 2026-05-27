@@ -20,3 +20,4 @@ Commit  |  Descripcion
   1	| Codigo base secuencial (Tarea A + B)	|
   2	| Paralelizacion OpenMP baseline (IA)	|
   3	| Fix race condition en histograma (atomic vs reduction)    |
+  4	| Schedulers: static/ dynamic/ guided - optimo: dynamic (chunk=1)    |
