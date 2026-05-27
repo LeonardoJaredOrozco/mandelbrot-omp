@@ -22,3 +22,4 @@ Commit  |  Descripcion
   3	| Fix race condition en histograma (atomic vs reduction)    |
   4	| Schedulers: static/ dynamic/ guided - optimo: dynamic (chunk=1)    |
   5	| SPMD vectorizacion - SIMD v1 con accesos no contiguos    |
+  5.1	| SIMD v2 - se hizo una revision con algunos cambios	|

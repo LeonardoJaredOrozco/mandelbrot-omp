@@ -1,6 +1,8 @@
 /*
  * mandelbrot_simd.cpp
  * Tarea B con vectorización SIMD forzada (SPMD)
+ * v1: accesos no contiguos (lento, documentado)
+ * v2: canales separados para acceso contiguo (vectorizable)
  * Verificar vectorización con: -fopt-info-vec-optimized
  */
 
@@ -96,14 +98,11 @@ double blur_no_simd(const std::vector<Pixel>& src,
 }
 
 // ---------------------------------------------------------------------------
-// TAREA B con SIMD — vectorización forzada en bucle interno
-// Se aplana el kernel en un arreglo separado de floats para
-// permitir al compilador generar instrucciones SIMD (SSE/AVX)
+// TAREA B con SIMD v1 — accesos no contiguos (documentado como antipatrón)
 // ---------------------------------------------------------------------------
 double blur_simd(const std::vector<Pixel>& src,
                        std::vector<Pixel>& dst,
                  const std::vector<double>& kernel) {
-    // Precalcula kernel como float para mejor vectorización
     const int KN = KSIZE * KSIZE;
     float kf[KN];
     for (int i = 0; i < KN; ++i) kf[i] = static_cast<float>(kernel[i]);
@@ -115,7 +114,6 @@ double blur_simd(const std::vector<Pixel>& src,
         for (int px = 0; px < WIDTH; ++px) {
             float sr = 0.0f, sg = 0.0f, sb = 0.0f;
 
-            // Coordenadas de vecinos precalculadas para el compilador
             int ny_arr[KSIZE * KSIZE];
             int nx_arr[KSIZE * KSIZE];
             int idx = 0;
@@ -126,7 +124,6 @@ double blur_simd(const std::vector<Pixel>& src,
                     ++idx;
                 }
 
-            // Bucle interno vectorizable con #pragma omp simd
             #pragma omp simd reduction(+:sr,sg,sb)
             for (int k = 0; k < KN; ++k) {
                 const Pixel& p = src[ny_arr[k] * WIDTH + nx_arr[k]];
@@ -135,6 +132,61 @@ double blur_simd(const std::vector<Pixel>& src,
                 sb += kf[k] * p.b;
             }
 
+            dst[py * WIDTH + px] = {
+                static_cast<unsigned char>(sr),
+                static_cast<unsigned char>(sg),
+                static_cast<unsigned char>(sb)
+            };
+        }
+    }
+
+    auto t1 = std::chrono::high_resolution_clock::now();
+    return std::chrono::duration<double>(t1 - t0).count();
+}
+
+// ---------------------------------------------------------------------------
+// TAREA B con SIMD v2 — canales separados para acceso contiguo
+// ---------------------------------------------------------------------------
+double blur_simd_v2(const std::vector<Pixel>& src,
+                          std::vector<Pixel>& dst,
+                    const std::vector<double>& kernel) {
+    const int N = WIDTH * HEIGHT;
+    const int KN = KSIZE * KSIZE;
+
+    std::vector<float> ch_r(N), ch_g(N), ch_b(N);
+    #pragma omp parallel for simd
+    for (int i = 0; i < N; ++i) {
+        ch_r[i] = src[i].r;
+        ch_g[i] = src[i].g;
+        ch_b[i] = src[i].b;
+    }
+
+    float kf[KN];
+    for (int i = 0; i < KN; ++i) kf[i] = static_cast<float>(kernel[i]);
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+
+    #pragma omp parallel for schedule(static)
+    for (int py = 0; py < HEIGHT; ++py) {
+        for (int px = 0; px < WIDTH; ++px) {
+            float sr = 0.0f, sg = 0.0f, sb = 0.0f;
+            int k = 0;
+            for (int ky = -RADIUS; ky <= RADIUS; ++ky) {
+                int ny = std::max(0, std::min(HEIGHT-1, py+ky));
+                const float* row_r = &ch_r[ny * WIDTH];
+                const float* row_g = &ch_g[ny * WIDTH];
+                const float* row_b = &ch_b[ny * WIDTH];
+
+                #pragma omp simd reduction(+:sr,sg,sb)
+                for (int kx = -RADIUS; kx <= RADIUS; ++kx) {
+                    int nx = std::max(0, std::min(WIDTH-1, px+kx));
+                    float w = kf[k + kx + RADIUS];
+                    sr += w * row_r[nx];
+                    sg += w * row_g[nx];
+                    sb += w * row_b[nx];
+                }
+                k += KSIZE;
+            }
             dst[py * WIDTH + px] = {
                 static_cast<unsigned char>(sr),
                 static_cast<unsigned char>(sg),
@@ -170,10 +222,15 @@ int main() {
     std::cout << std::fixed << std::setprecision(4);
     std::cout << "[Tarea B sin SIMD]  " << t_no_simd << " s\n";
 
-    // ── Con SIMD ───────────────────────────────────────────────────────────
+    // ── Con SIMD v1 (antipatrón) ───────────────────────────────────────────
     double t_simd = blur_simd(img, dst2, kernel);
-    std::cout << "[Tarea B con SIMD]  " << t_simd << " s\n";
-    std::cout << "Speedup SIMD:       " << t_no_simd / t_simd << "x\n\n";
+    std::cout << "[Tarea B SIMD v1]   " << t_simd << " s  (accesos no contiguos)\n";
+    std::cout << "Speedup SIMD v1:    " << t_no_simd / t_simd << "x\n\n";
+
+    // ── Con SIMD v2 (canales separados) ────────────────────────────────────
+    double t_simd2 = blur_simd_v2(img, dst2, kernel);
+    std::cout << "[Tarea B SIMD v2]   " << t_simd2 << " s  (canales separados)\n";
+    std::cout << "Speedup SIMD v2:    " << t_no_simd / t_simd2 << "x\n\n";
 
     save_ppm("mandelbrot_simd.ppm", dst2);
     std::cout << "Imagen guardada: mandelbrot_simd.ppm\n";
