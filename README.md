@@ -14,3 +14,7 @@ g++ -02 -o mandelbrot_seq src/mandelbrot_seq.cpp
 ```
 
 ##Historial de commits
+
+Commit  |  Descripcion
+
+  1	| COdigo base secuencial (Tarea A + B)

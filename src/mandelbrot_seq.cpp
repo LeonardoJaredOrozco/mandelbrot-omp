@@ -129,7 +129,7 @@ void apply_gaussian_blur(const std::vector<Pixel>& src,
 void save_ppm(const std::string& filename, const std::vector<Pixel>& img) {
     std::ofstream f(filename, std::ios::binary);
     f << "P6\n" << WIDTH << " " << HEIGHT << "\n255\n";
- s   for (const auto& p : img)
+    for (const auto& p : img)
         f.write(reinterpret_cast<const char*>(&p), 3);
     std::cout << "Imagen guardada: " << filename << "\n";
 }
