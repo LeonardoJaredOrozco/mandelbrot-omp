@@ -17,4 +17,5 @@ g++ -02 -o mandelbrot_seq src/mandelbrot_seq.cpp
 
 Commit  |  Descripcion
 
-  1	| COdigo base secuencial (Tarea A + B)
+  1	| Codigo base secuencial (Tarea A + B)	|
+  2	| Paralelizacion OpenMP baseline (IA)	|
