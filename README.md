@@ -19,7 +19,8 @@ Commit  |  Descripcion
 
   1	| Codigo base secuencial (Tarea A + B)	|
   2	| Paralelizacion OpenMP baseline (IA)	|
-  3	| Fix race condition en histograma (atomic vs reduction)    |
+  3	| Arreglo race condition en histograma (atomic vs reduction)    |
   4	| Schedulers: static/ dynamic/ guided - optimo: dynamic (chunk=1)    |
   5	| SPMD vectorizacion - SIMD v1 con accesos no contiguos    |
-  5.1	| SIMD v2 - se hizo una revision con algunos cambios	|
+  5.1	| Arreglo SIMD v2: canales separados, speedup 1.71x por cache	|
+  6	| Afinidad de hilos + benchmark final speedup 1-6 hilos    |
