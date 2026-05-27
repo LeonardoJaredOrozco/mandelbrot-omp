@@ -21,3 +21,4 @@ Commit  |  Descripcion
   2	| Paralelizacion OpenMP baseline (IA)	|
   3	| Fix race condition en histograma (atomic vs reduction)    |
   4	| Schedulers: static/ dynamic/ guided - optimo: dynamic (chunk=1)    |
+  5	| SPMD vectorizacion - SIMD v1 con accesos no contiguos    |
